@@ -7,6 +7,7 @@ use crossterm::ExecutableCommand;
 use std::time::Duration;
 use std::sync::mpsc::channel;
 use std::thread;
+use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut audio = Audio::new();
@@ -43,9 +44,12 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Game Loop
     let mut player = Player::new();
+    let mut instant = Instant::now();
     
     'gameloop: loop {
         // Per frame init
+        let delta = instant.elapsed();
+        instant = Instant::now();
         let mut curr_frame = new_frame();
 
         while event::poll(Duration::default())?{ 
@@ -53,6 +57,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 match key_event.code{
                     event::KeyCode::Left => player.move_left(),
                     event::KeyCode::Right => player.move_right(),
+                    event::KeyCode::Char(' ') | event::KeyCode::Enter => {
+                        if player.shoot(){
+                            audio.play("pew");
+                        }
+                    },
                     event::KeyCode::Esc | event::KeyCode::Char('q') => {
                         audio.play("lose");
                         break 'gameloop;
@@ -61,6 +70,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+
+        // Updates
+        player.update(delta);
 
         // Draw & Render
         player.draw(&mut curr_frame);
