@@ -1,6 +1,6 @@
 use std::error::Error;
 use crossterm::{terminal::{self, EnterAlternateScreen, LeaveAlternateScreen}, cursor::{Hide, Show}, event::{self, Event}};
-use invaders::{frame::{self, new_frame, Drawable}, render, player::Player};
+use invaders::{frame::{self, new_frame, Drawable}, render, player::Player, invaders::Invaders};
 use rusty_audio::Audio;
 use std::io;
 use crossterm::ExecutableCommand;
@@ -44,6 +44,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Game Loop
     let mut player = Player::new();
+    let mut invaders = Invaders::new();
     let mut instant = Instant::now();
     
     'gameloop: loop {
@@ -73,9 +74,16 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         // Updates
         player.update(delta);
+        if invaders.update(delta) {
+            audio.play("move")
+        }
 
         // Draw & Render
-        player.draw(&mut curr_frame);
+        let drawables: Vec<&dyn Drawable> = vec![&player, &invaders];
+        for drawable in drawables {
+            drawable.draw(&mut curr_frame);
+        }
+
         let _ = render_tx.send(curr_frame);
         thread::sleep(Duration::from_millis(1));
     }
